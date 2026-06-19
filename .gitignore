@@ -1,0 +1,10 @@
+node_modules/
+local-db.json
+.env
+.env.local
+.env.*.local
+.aws-sam/
+.DS_Store
+.impl-plans
+.vscode
+dist/

@@ -1,0 +1,72 @@
+<% if (items.length === 0) { %>
+  <div class="empty-state">
+    <div class="empty-icon">🏋️‍♂️</div>
+    <p class="empty-text">No sessions logged yet. Log your first session above!</p>
+  </div>
+<% } else { %>
+  <div class="logs-list">
+    <% items.forEach(item => { %>
+      <% if (item.type === "workout") { %>
+        <!-- New Workout Log Card -->
+        <div class="log-card" data-exercise="<%= item.exercise %>" data-type="workout" style="border-left: 4px solid var(--accent-cyan);">
+          <div class="log-header">
+            <div class="log-title-group">
+              <span class="log-icon">💪</span>
+              <span class="log-date"><%= item.displayDate %></span>
+            </div>
+            <span class="log-badge" style="background: rgba(34, 211, 238, 0.15); color: var(--accent-cyan);">
+              <%= item.category %> · <%= item.day %>
+            </span>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-block-start: 0.25rem;">
+            <div>
+              <h3 style="font-family: var(--font-heading); font-size: 1.25rem; font-weight: 700; color: var(--text-primary);"><%= item.exercise %></h3>
+              <p style="font-size: 0.9rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                <%= item.sets %> sets × <%= item.reps %> reps @ <strong style="color: var(--text-primary);"><%= item.weight %> kg</strong>
+                <% if (item.rpe) { %> · RPE <%= item.rpe %><% } %>
+              </p>
+            </div>
+            <div style="text-align: right;">
+              <span style="font-size: 0.725rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Fatigue Tax</span>
+              <div style="font-family: var(--font-heading); font-size: 1.125rem; font-weight: 700; color: var(--accent-deadlift);"><%= item.fatigue_score %>/5</div>
+            </div>
+          </div>
+          <% if (item.notes) { %>
+            <div style="background: rgba(0,0,0,0.2); border-radius: var(--radius-sm); padding: 0.5rem 0.75rem; font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.5rem; font-style: italic;">
+              "<%= item.notes %>"
+            </div>
+          <% } %>
+        </div>
+      <% } else { %>
+        <!-- Legacy Metrics Card -->
+        <div class="log-card" data-type="metric">
+          <div class="log-header">
+            <div class="log-title-group">
+              <span class="log-icon">⏳</span>
+              <span class="log-date"><%= item.displayDate %></span>
+            </div>
+            <span class="log-badge" style="background: rgba(255,255,255,0.05); color: var(--text-secondary);">Legacy Log</span>
+          </div>
+          <div class="log-metrics">
+            <div class="metric-pill bench-pill">
+              <div class="metric-label">Bench</div>
+              <div class="metric-value"><%= item.bench %> <span class="unit">kg</span></div>
+            </div>
+            <div class="metric-pill deadlift-pill">
+              <div class="metric-label">Deadlift</div>
+              <div class="metric-value"><%= item.deadlift %> <span class="unit">kg</span></div>
+            </div>
+            <div class="metric-pill press-pill">
+              <div class="metric-label">Push Press</div>
+              <div class="metric-value"><%= item.push_press %> <span class="unit">kg</span></div>
+            </div>
+            <div class="metric-pill weight-pill">
+              <div class="metric-label">Bodyweight</div>
+              <div class="metric-value"><%= item.bodyweight %> <span class="unit">kg</span></div>
+            </div>
+          </div>
+        </div>
+      <% } %>
+    <% }) %>
+  </div>
+<% } %>

@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strongman Tracker - Iron & Recovery Dashboard</title>
+  <meta name="description" content="Track your strongman lifts, recovery, plateau detection, physique, and body measurements in one fast dashboard.">
+
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- HTMX Script -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+  
+  <style>
+    /* ── Dashboard-specific overrides ────────────────────────────── */
+    .insight-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem 1.125rem;
+      margin-bottom: 0.625rem;
+      display: flex;
+      gap: 0.875rem;
+      align-items: flex-start;
+      animation: fadeUp 0.2s ease forwards;
+    }
+    .insight-card.severity-high {
+      border-left: 3px solid var(--red);
+    }
+    .insight-card.severity-low {
+      border-left: 3px solid var(--blue);
+    }
+    .insight-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+      flex-shrink: 0;
+    }
+    .insight-title {
+      font-family: var(--font-heading);
+      font-weight: 700;
+      font-size: 0.9rem;
+      margin-bottom: 0.25rem;
+      color: var(--text-primary);
+    }
+    .insight-desc {
+      font-size: 0.825rem;
+      color: var(--text-secondary);
+      line-height: 1.45;
+      margin-bottom: 0.4rem;
+    }
+    .insight-recs {
+      list-style: none;
+      padding-left: 0;
+      margin: 0;
+      font-size: 0.8rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.2rem;
+    }
+    .insight-recs li {
+      display: flex;
+      gap: 0.4rem;
+      color: var(--text-secondary);
+    }
+    .insight-recs li::before {
+      content: "–";
+      color: var(--text-muted);
+    }
+
+    /* ── KPI grid ─────────────────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (max-width: 640px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    .kpi-card {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 0.875rem;
+      text-align: center;
+    }
+    .kpi-num {
+      font-family: var(--font-heading);
+      font-size: 1.375rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin-top: 0.2rem;
+    }
+    .kpi-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* ── Charts ───────────────────────────────────────────────── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1.25rem;
+    }
+    @media (max-width: 768px) {
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    .chart-container {
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1rem;
+    }
+    .chart-wrapper {
+      position: relative;
+      height: 230px;
+      width: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container" style="max-width: 840px;">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-emoji">⚡</span>
+        <h1>Dashboard</h1>
+      </div>
+      <div style="display: flex; gap: 0.4rem; align-items: center;">
+        <!-- Log Workout Button -->
+        <a href="/" class="btn-secondary" style="text-decoration: none;">
+          <span>Log Workout</span>
+          <span>🏋️‍♂️</span>
+        </a>
+
+        <!-- Alert Bell Icon with Badge -->
+        <button class="bell-btn" type="button" id="bell-toggle" aria-label="Toggle Insights Alerts">
+          <span class="bell-icon">🔔</span>
+          <% if (insights && insights.length > 0) { %>
+            <span class="bell-badge"><%= insights.length %></span>
+          <% } %>
+        </button>
+
+        <!-- Sync Analytics Button -->
+        <button
+          hx-post="/analytics/trigger-aggregate"
+          hx-swap="beforebegin"
+          class="btn-secondary"
+        >
+          <span>Sync</span>
+          <span>🔄</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Stats strip -->
+    <% if (latestSummary) { %>
+      <div class="top-stats-strip">
+        <div class="strip-item">
+          <span class="strip-label">Score</span>
+          <span class="strip-value"><%= latestSummary.strongman_score %></span>
+        </div>
+        <div class="strip-item">
+          <span class="strip-label">Weekly Vol</span>
+          <span class="strip-value"><%= latestSummary.total_volume.toLocaleString() %> <span style="color: var(--text-muted); font-size: 0.7rem;">kg</span></span>
+        </div>
+        <div class="strip-item">
+          <span class="strip-label">Fatigue</span>
+          <span class="strip-value"><%= latestSummary.fatigue_score %></span>
+        </div>
+        <div class="strip-item">
+          <span class="strip-label">Avg RPE</span>
+          <span class="strip-value"><%= latestSummary.average_rpe ? latestSummary.average_rpe.toFixed(1) : "—" %></span>
+        </div>
+      </div>
+    <% } %>
+
+    <!-- Collapsible Alerts Drawer -->
+    <div class="interactive-alerts-pane collapsed" id="alerts-pane">
+      <div class="alerts-header">
+        <h3>Insights &amp; Alerts</h3>
+        <% if (insights && insights.length > 0) { %>
+          <span class="alerts-count"><%= insights.length %> warnings</span>
+        <% } else { %>
+          <span class="alerts-count" style="color: var(--green);">optimal</span>
+        <% } %>
+      </div>
+      <div class="alerts-list">
+        <% if (insights && insights.length > 0) { %>
+          <% insights.forEach(ins => { %>
+            <% 
+              let severityClass = "";
+              let emoji = "⚠️";
+              if (ins.severity === "high") { severityClass = "severity-high"; emoji = "🚨"; }
+              if (ins.severity === "low") { severityClass = "severity-low"; emoji = "💡"; }
+            %>
+            <div class="insight-card <%= severityClass %>" style="margin-bottom: 0;">
+              <span class="insight-icon"><%= emoji %></span>
+              <div>
+                <div class="insight-title"><%= ins.title %></div>
+                <div class="insight-desc"><%= ins.description %></div>
+              </div>
+            </div>
+          <% }) %>
+        <% } %>
+      </div>
+    </div>
+
+    <main class="app-main unified-card">
+
+      <!-- Tab Navigation -->
+      <nav class="tab-nav" aria-label="Dashboard sections">
+        <button class="tab-btn active" data-tab="tab-metrics" type="button">
+          <span class="tab-icon">📈</span>
+          <span class="tab-label">Lifts</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-logs" type="button">
+          <span class="tab-icon">📋</span>
+          <span class="tab-label">Logs</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-recovery" type="button">
+          <span class="tab-icon">🔋</span>
+          <span class="tab-label">Recovery</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-plateau" type="button">
+          <span class="tab-icon">⚖️</span>
+          <span class="tab-label">Plateau</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-physique" type="button">
+          <span class="tab-icon">🐻</span>
+          <span class="tab-label">Physique</span>
+        </button>
+        <button class="tab-btn" data-tab="tab-measurements" type="button">
+          <span class="tab-icon">📏</span>
+          <span class="tab-label">Measure</span>
+        </button>
+      </nav>
+
+      <!-- Tab Panels -->
+      <div class="tab-panels">
+
+        <!-- Lift Metrics & Logger -->
+        <section id="tab-metrics" class="tab-panel active animate-slide-up">
+          <!-- Charts Visualization Section -->
+          <% if (summaries && summaries.length > 0) { %>
+            <div class="charts-section" style="display: flex; flex-direction: column; gap: 1.25rem;">
+              <h3 style="font-family: var(--font-heading); font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 0.5rem;">
+                Progression &amp; Volume
+              </h3>
+              
+              <div class="charts-grid">
+                <!-- Lift progress -->
+                <div class="chart-container">
+                  <h4 style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    Lift Averages (kg)
+                  </h4>
+                  <div class="chart-wrapper">
+                    <canvas id="kpiLiftsChart"></canvas>
+                  </div>
+                </div>
+                <!-- Muscle Sets volume -->
+                <div class="chart-container">
+                  <h4 style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                    Muscle Volume (Sets)
+                  </h4>
+                  <div class="chart-wrapper">
+                    <canvas id="muscleVolumeChart"></canvas>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Bodyweight trend -->
+              <div class="chart-container" style="width: 100%;">
+                <h4 style="font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 0.04em;">
+                  Bodyweight Trend (kg)
+                </h4>
+                <div class="chart-wrapper" style="height: 150px;">
+                  <canvas id="bodyweightChart"></canvas>
+                </div>
+              </div>
+            </div>
+          <% } %>
+        </section>
+
+        <!-- Workout Logs Tab -->
+        <section id="tab-logs" class="tab-panel">
+          <h2>Workout Log History</h2>
+          
+          <!-- Filters Header -->
+          <div class="logs-filters" style="display: flex; gap: 0.75rem; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 0.35rem;">
+              <label for="filter-exercise" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.02em;">Exercise</label>
+              <select id="filter-exercise">
+                <option value="all">All Exercises</option>
+                <% 
+                  const exerciseNames = [...new Set(items.map(i => i.exercise).filter(Boolean))];
+                  exerciseNames.sort().forEach(name => { %>
+                    <option value="<%= name %>"><%= name %></option>
+                <% }) %>
+              </select>
+            </div>
+            <div style="flex: 1; min-width: 150px; display: flex; flex-direction: column; gap: 0.35rem;">
+              <label for="filter-type" style="font-size: 0.75rem; text-transform: uppercase; color: var(--text-muted); font-weight: 700; letter-spacing: 0.02em;">Type</label>
+              <select id="filter-type">
+                <option value="all">All Types</option>
+                <option value="workout">Workouts</option>
+                <option value="metric">Legacy Logs</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="logs-container">
+            <%- include('partials/logs', { items: items }) %>
+          </div>
+          <div id="no-matching-logs" class="empty-state" style="display: none; margin-top: 1rem;">
+            <div class="empty-icon">🔍</div>
+            <p class="empty-text">No workout logs match your selected filter criteria.</p>
+          </div>
+        </section>
+
+        <!-- Recovery -->
+        <section id="tab-recovery" class="tab-panel">
+          <h2>Recovery Check</h2>
+          <%- include('forms/recovery') %>
+        </section>
+
+        <!-- Plateau Intelligence (Automated) -->
+        <section id="tab-plateau" class="tab-panel">
+          <h2>Plateau Intelligence</h2>
+
+          <% if (!autoPlateaus || autoPlateaus.length === 0) { %>
+            <div class="empty-state" style="padding: 2rem 1rem;">
+              <div class="empty-icon">📊</div>
+              <p class="empty-text">No workout history yet — log sessions and sync analytics to detect plateau signals.</p>
+            </div>
+          <% } else { %>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+              <% autoPlateaus.forEach(p => {
+                const trendMeta = {
+                  progressing: { icon: '📈', color: '#22c55e', bg: 'rgba(34,197,94,0.08)', border: 'rgba(34,197,94,0.3)', label: 'Progressing' },
+                  stalled:     { icon: '⚠️', color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.3)', label: 'Stalled' },
+                  declining:   { icon: '🚨', color: '#ef4444', bg: 'rgba(239,68,68,0.08)',  border: 'rgba(239,68,68,0.3)',  label: 'Declining' }
+                };
+                const meta = trendMeta[p.trend] || trendMeta.stalled;
+                const sevLabels = { low: 'Low', medium: 'Medium', high: 'High', critical: 'Critical' };
+              %>
+                <div style="background: <%= meta.bg %>; border: 1px solid <%= meta.border %>; border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                      <span style="font-size: 1.35rem;"><%= meta.icon %></span>
+                      <span style="font-family: var(--font-heading); font-weight: 700; font-size: 1.05rem;"><%= p.lift %></span>
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                      <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: <%= meta.color %>; background: <%= meta.bg %>; border: 1px solid <%= meta.border %>; padding: 0.2rem 0.6rem; border-radius: 999px;"><%= meta.label %></span>
+                      <% if (p.isPlateaued && p.severity) { %>
+                        <span style="font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); background: rgba(255,255,255,0.04); border: 1px solid var(--card-border); padding: 0.2rem 0.6rem; border-radius: 999px;"><%= sevLabels[p.severity] %> Severity</span>
+                      <% } %>
+                    </div>
+                  </div>
+                  <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                    <div style="font-size: 0.82rem; color: var(--text-secondary);">
+                      Slope: <strong style="color: var(--text-primary)"><%= p.slope > 0 ? '+' : '' %><%= p.slope %> kg/wk</strong>
+                    </div>
+                    <div style="font-size: 0.82rem; color: var(--text-secondary);">
+                      Stalled: <strong style="color: var(--text-primary)"><%= p.stalledWeeks %> week(s)</strong>
+                    </div>
+                  </div>
+                  <% if (p.bottlenecks && p.bottlenecks.length > 0) { %>
+                    <div style="background: rgba(0,0,0,0.15); border-radius: var(--radius-sm); padding: 0.75rem;">
+                      <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); margin-bottom: 0.4rem; letter-spacing: 0.04em;">Root Cause Analysis</div>
+                      <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 0.25rem;">
+                        <% p.bottlenecks.forEach(b => { %>
+                          <li style="font-size: 0.835rem; color: var(--text-secondary); display: flex; gap: 0.4rem;"><span style="color: var(--accent-cyan)">→</span> <%= b %></li>
+                        <% }) %>
+                      </ul>
+                    </div>
+                  <% } %>
+                </div>
+              <% }) %>
+            </div>
+          <% } %>
+        </section>
+
+        <!-- Physique Intelligence (Automated) -->
+        <section id="tab-physique" class="tab-panel">
+          <h2>Physique Intelligence</h2>
+
+          <% if (!autoPhysique) { %>
+            <div class="empty-state" style="padding: 2rem 1rem;">
+              <div class="empty-icon">🐻</div>
+              <p class="empty-text">Sync analytics to generate physique intelligence from your training data.</p>
+            </div>
+          <% } else { %>
+            <%
+              const momentumColors = {
+                'Accelerating': { color: '#22c55e', icon: '🚀' },
+                'Stable':       { color: '#22d3ee', icon: '⚖️' },
+                'Declining':    { color: '#ef4444', icon: '📉' },
+                'Insufficient Data': { color: '#94a3b8', icon: '🔍' }
+              };
+              const momMeta = momentumColors[autoPhysique.momentum] || momentumColors['Stable'];
+
+              const silhouetteLabel = s => s >= 86 ? 'Advanced' : s >= 71 ? 'Strongman-Oriented' : s >= 41 ? 'Developing' : 'Beginner';
+              const silhouetteColor = s => s >= 71 ? '#22c55e' : s >= 41 ? '#fbbf24' : '#ef4444';
+
+              const bulkLabels = {
+                lean_gain:     { label: 'Productive Lean Gain 💪', color: '#22c55e' },
+                fat_gain:      { label: 'Weight Gain May Be Fat 🍗', color: '#ef4444' },
+                recomposition: { label: 'Body Recomposition Detected 🔄', color: '#22d3ee' },
+                bulk:          { label: 'Mass Accumulation Phase 🐂', color: '#a855f7' },
+                stable:        { label: 'Body Composition Stable ⚖️', color: '#94a3b8' }
+              };
+              const bulkMeta = autoPhysique.bulkQuality ? (bulkLabels[autoPhysique.bulkQuality] || bulkLabels.stable) : null;
+            %>
+
+            <!-- Scores Row -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem;">
+              <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 0.5rem;">Silhouette Score</div>
+                <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: <%= silhouetteColor(autoPhysique.silhouetteScore) %>"><%= autoPhysique.silhouetteScore %></div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;"><%= silhouetteLabel(autoPhysique.silhouetteScore) %></div>
+              </div>
+              <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 0.5rem;">Trap Score</div>
+                <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: var(--accent-cyan);"><%= autoPhysique.trapScore %></div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">Carries + Upper Back</div>
+              </div>
+              <div style="background: var(--card-bg); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 1rem; text-align: center;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 0.5rem;">Torso Score</div>
+                <div style="font-family: var(--font-heading); font-size: 2rem; font-weight: 800; color: var(--accent-purple);"><%= autoPhysique.torsoScore %></div>
+                <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 0.25rem;">Chest + Shoulders</div>
+              </div>
+            </div>
+
+            <!-- Momentum + Bulk Quality -->
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem;">
+              <div style="flex: 1; min-width: 140px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.5rem;"><%= momMeta.icon %></span>
+                <div>
+                  <div style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.04em;">Physique Momentum</div>
+                  <div style="font-family: var(--font-heading); font-weight: 700; color: <%= momMeta.color %>;"><%= autoPhysique.momentum %></div>
+                </div>
+              </div>
+              <% if (bulkMeta) { %>
+                <div style="flex: 1; min-width: 140px; background: rgba(0,0,0,0.2); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 0.875rem 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                  <div>
+                    <div style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.04em;">Bulk Quality</div>
+                    <div style="font-family: var(--font-heading); font-weight: 700; color: <%= bulkMeta.color %>;"><%= bulkMeta.label %></div>
+                  </div>
+                </div>
+              <% } %>
+            </div>
+
+            <!-- Muscle Volume Stimulus Bars -->
+            <div style="background: rgba(0,0,0,0.15); border: 1px solid var(--card-border); border-radius: var(--radius-md); padding: 1.25rem;">
+              <div style="font-size: 0.72rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 1rem;">Weekly Muscle Volume Stimulus</div>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem;">
+                <%
+                  const stimulusConfig = {
+                    chest: { label: 'Chest', target: 16 },
+                    back: { label: 'Back', target: 16 },
+                    traps: { label: 'Traps', target: 12 },
+                    shoulders: { label: 'Shoulders', target: 12 },
+                    legs: { label: 'Legs', target: 16 },
+                    arms: { label: 'Arms', target: 12 },
+                    core: { label: 'Core', target: 10 }
+                  };
+                  const stimColors = { growth: '#22c55e', maintenance: '#22d3ee', under: '#ef4444' };
+                  const stimLabels = { growth: 'Growth', maintenance: 'Maintenance', under: 'Under-stimulated' };
+                %>
+                <% Object.entries(autoPhysique.muscleStimulus).forEach(([key, ms]) => {
+                  const cfg = stimulusConfig[key];
+                  const pct = Math.min(Math.round((ms.sets / cfg.target) * 100), 100);
+                  const barColor = stimColors[ms.status];
+                %>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.3rem;">
+                      <span style="font-size: 0.825rem; font-weight: 600; color: var(--text-secondary);"><%= cfg.label %></span>
+                      <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <span style="font-size: 0.75rem; color: var(--text-muted);"><%= ms.sets %>/<%= cfg.target %> sets</span>
+                        <span style="font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: <%= barColor %>; padding: 0.1rem 0.4rem; border-radius: 999px; border: 1px solid <%= barColor %>22;"><%= stimLabels[ms.status] %></span>
+                      </div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.05); border-radius: 999px; height: 6px; overflow: hidden;">
+                      <div style="background: <%= barColor %>; width: <%= pct %>%; height: 100%; border-radius: 999px; transition: width 0.4s ease;"></div>
+                    </div>
+                  </div>
+                <% }) %>
+              </div>
+            </div>
+          <% } %>
+        </section>
+
+        <!-- Measurements (Keep Form + Add Auto Trend) -->
+        <section id="tab-measurements" class="tab-panel">
+          <h2>Body Measurements</h2>
+
+          <!-- Auto Measurement Trends Card -->
+          <% if (autoMeasurements && autoMeasurements.latest) { %>
+            <%
+              const deltaIcon = v => v === null ? '—' : v > 0 ? `<span style="color:var(--green)">↑ +${v}</span>` : v < 0 ? `<span style="color:var(--red)">↓ ${v}</span>` : `<span style="color:var(--text-muted)">→ 0</span>`;
+              const m = autoMeasurements;
+            %>
+            <div style="background: var(--bg-raised); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 1.25rem; margin-bottom: 1.5rem;">
+              <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; margin-bottom: 1rem;">Latest Measurements vs Previous</div>
+              <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.625rem;">
+                <% const measFields = [
+                  { key: 'bodyweight', label: 'Bodyweight', unit: 'kg' },
+                  { key: 'chest',      label: 'Chest',      unit: 'cm' },
+                  { key: 'arms',       label: 'Arms',       unit: 'cm' },
+                  { key: 'waist',      label: 'Waist',      unit: 'cm' },
+                  { key: 'neck',       label: 'Neck',       unit: 'cm' },
+                  { key: 'thigh',      label: 'Thigh',      unit: 'cm' },
+                  { key: 'forearm',    label: 'Forearm',    unit: 'cm' }
+                ]; %>
+                <% measFields.forEach(f => {
+                  const val = m.latest[f.key];
+                  if (!val) return;
+                  const d = m.deltas[f.key];
+                %>
+                  <div style="background: var(--bg-surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 0.75rem;">
+                    <div style="font-size: 0.68rem; text-transform: uppercase; font-weight: 700; color: var(--text-muted); letter-spacing: 0.04em; margin-bottom: 0.25rem;"><%= f.label %></div>
+                    <div style="font-family: var(--font-heading); font-weight: 700; font-size: 1.125rem; color: var(--text-primary);"><%= val %><span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 400; margin-left: 0.2rem;"><%= f.unit %></span></div>
+                    <div style="font-size: 0.75rem; margin-top: 0.1rem;"><%- deltaIcon(d) %></div>
+                  </div>
+                <% }) %>
+              </div>
+              <% if (autoMeasurements.bulkQuality) {
+                const bulkLabels2 = {
+                  lean_gain:     { label: 'Productive Lean Gain', color: 'var(--green)' },
+                  fat_gain:      { label: 'Weight Gain May Be Fat-Dominant', color: 'var(--red)' },
+                  recomposition: { label: 'Possible Body Recomposition', color: 'var(--blue)' },
+                  bulk:          { label: 'Mass Accumulation Phase', color: 'var(--text-secondary)' },
+                  stable:        { label: 'Body Composition Stable', color: 'var(--text-muted)' }
+                };
+                const bm = bulkLabels2[autoMeasurements.bulkQuality] || bulkLabels2.stable;
+              %>
+                <div style="margin-top: 0.875rem; padding: 0.5rem 0.875rem; border-top: 1px solid var(--border); font-size: 0.8rem; font-weight: 600; color: <%= bm.color %>;">
+                  Signal: <%= bm.label %>
+                </div>
+              <% } %>
+            </div>
+          <% } %>
+
+          <%- include('forms/measurements') %>
+        </section>
+
+      </div>
+
+    </main>
+
+    <footer class="app-footer">
+      <p>&copy; 2026 Strongman Tracker. Stay Strong, Stay Resilient.</p>
+    </footer>
+
+  </div>
+
+  <!-- Tab Switching Script -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const buttons = document.querySelectorAll('.tab-btn');
+      const panels  = document.querySelectorAll('.tab-panel');
+
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetId = btn.dataset.tab;
+
+          buttons.forEach(b => b.classList.remove('active'));
+          panels.forEach(p => {
+            p.classList.remove('active');
+            p.classList.remove('animate-slide-up');
+          });
+
+          btn.classList.add('active');
+          const targetPanel = document.getElementById(targetId);
+          targetPanel.classList.add('active');
+
+          requestAnimationFrame(() => {
+            targetPanel.classList.add('animate-slide-up');
+          });
+        });
+      });
+
+      // Workout Logs Real-Time Client-Side Filter
+      const filterExercise = document.getElementById('filter-exercise');
+      const filterType = document.getElementById('filter-type');
+
+      function filterLogs() {
+        const selectedExercise = filterExercise ? filterExercise.value : 'all';
+        const selectedType = filterType ? filterType.value : 'all';
+
+        const cards = document.querySelectorAll('#tab-logs .log-card');
+        let visibleCount = 0;
+        cards.forEach(card => {
+          const cardExercise = card.getAttribute('data-exercise') || '';
+          const cardType = card.getAttribute('data-type') || '';
+
+          const matchExercise = (selectedExercise === 'all' || cardExercise === selectedExercise);
+          const matchType = (selectedType === 'all' || cardType === selectedType);
+
+          if (matchExercise && matchType) {
+            card.style.display = 'flex';
+            visibleCount++;
+          } else {
+            card.style.display = 'none';
+          }
+        });
+
+        const noMatchDiv = document.getElementById('no-matching-logs');
+        if (noMatchDiv) {
+          noMatchDiv.style.display = (visibleCount === 0) ? 'block' : 'none';
+        }
+      }
+
+      if (filterExercise && filterType) {
+        filterExercise.addEventListener('change', filterLogs);
+        filterType.addEventListener('change', filterLogs);
+      }
+
+      // Interactive Alerts Bell Toggle
+      const bellToggle = document.getElementById('bell-toggle');
+      const alertsPane = document.getElementById('alerts-pane');
+      if (bellToggle && alertsPane) {
+        bellToggle.addEventListener('click', (e) => {
+          e.stopPropagation();
+          alertsPane.classList.toggle('collapsed');
+          bellToggle.classList.toggle('active');
+        });
+        
+        // Close pane when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!alertsPane.contains(e.target) && e.target !== bellToggle && !bellToggle.contains(e.target)) {
+            alertsPane.classList.add('collapsed');
+            bellToggle.classList.remove('active');
+          }
+        });
+      }
+    });
+  </script>
+
+  <!-- Chart.js Render Script -->
+  <% if (summaries && summaries.length > 0) { %>
+    <script>
+      (function() {
+        const summaries = <%- JSON.stringify(summaries) %>;
+        summaries.sort((a, b) => a.week.localeCompare(b.week));
+
+        const labels = summaries.map(s => s.week);
+        const gridColor = 'rgba(255, 255, 255, 0.06)';
+        const tickColor = '#555';
+        const fontFamily = 'Outfit';
+
+        const baseScales = {
+          x: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: fontFamily, size: 11 } } },
+          y: { grid: { color: gridColor }, ticks: { color: tickColor, font: { family: fontFamily, size: 11 } } }
+        };
+
+        // 1. KPI Lifts Chart
+        const kpiCtx = document.getElementById('kpiLiftsChart').getContext('2d');
+        new Chart(kpiCtx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: 'Bench',
+                data: summaries.map(s => s.bench_avg || null),
+                borderColor: '#5a9f70',
+                backgroundColor: 'rgba(90,159,112,0.08)',
+                tension: 0.3,
+                spanGaps: true,
+                borderWidth: 1.5,
+                pointRadius: 3
+              },
+              {
+                label: 'Deadlift',
+                data: summaries.map(s => s.deadlift_avg || null),
+                borderColor: '#c06050',
+                backgroundColor: 'rgba(192,96,80,0.08)',
+                tension: 0.3,
+                spanGaps: true,
+                borderWidth: 1.5,
+                pointRadius: 3
+              },
+              {
+                label: 'Push Press',
+                data: summaries.map(s => s.push_press_avg || null),
+                borderColor: '#6080b8',
+                backgroundColor: 'rgba(96,128,184,0.08)',
+                tension: 0.3,
+                spanGaps: true,
+                borderWidth: 1.5,
+                pointRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: {
+                  boxWidth: 8,
+                  usePointStyle: true,
+                  padding: 14,
+                  color: tickColor,
+                  font: { family: fontFamily, size: 11 }
+                }
+              }
+            },
+            scales: baseScales
+          }
+        });
+
+        // 2. Muscle Volume Sets Horizontal Bar Chart (latest week)
+        const latest = summaries[summaries.length - 1];
+        const muscleCtx = document.getElementById('muscleVolumeChart').getContext('2d');
+        new Chart(muscleCtx, {
+          type: 'bar',
+          data: {
+            labels: ['Chest', 'Back', 'Traps', 'Shoulders', 'Legs', 'Arms', 'Core'],
+            datasets: [{
+              label: 'Sets',
+              data: [
+                latest.chest_sets || 0,
+                latest.back_sets || 0,
+                latest.trap_sets || 0,
+                latest.shoulder_sets || 0,
+                latest.leg_sets || 0,
+                latest.arm_sets || 0,
+                latest.core_sets || 0
+              ],
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              borderColor: 'rgba(255, 255, 255, 0.25)',
+              borderWidth: 1
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { grid: { color: gridColor }, ticks: { color: tickColor, stepSize: 1, font: { family: fontFamily, size: 11 } } },
+              y: { grid: { display: false }, ticks: { color: tickColor, font: { family: fontFamily, size: 11, weight: 600 } } }
+            }
+          }
+        });
+
+        // 3. Bodyweight Trend Chart
+        const bwCtx = document.getElementById('bodyweightChart').getContext('2d');
+        new Chart(bwCtx, {
+          type: 'line',
+          data: {
+            labels: labels,
+            datasets: [{
+              label: 'Bodyweight',
+              data: summaries.map(s => s.bodyweight || null),
+              borderColor: 'rgba(255,255,255,0.45)',
+              backgroundColor: 'rgba(255,255,255,0.04)',
+              tension: 0.3,
+              fill: true,
+              spanGaps: true,
+              borderWidth: 1.5,
+              pointRadius: 3
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: baseScales
+          }
+        });
+      })();
+    </script>
+  <% } %>
+</body>
+</html>

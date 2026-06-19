@@ -1,0 +1,40 @@
+<form
+  hx-post="/recovery/save"
+  hx-target="#recovery-status"
+  hx-swap="innerHTML"
+  hx-on::after-request="this.reset()"
+  class="workout-form"
+>
+  <p class="section-desc">Rate your recovery markers to determine training readiness.</p>
+  <div class="form-grid">
+    <div class="form-group">
+      <label for="sleep">Sleep Hours</label>
+      <div class="input-wrapper">
+        <input type="number" id="sleep" name="sleep" placeholder="8" step="0.5" min="0" max="16" inputmode="decimal" required>
+        <span class="input-addon">hrs</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="energy">Energy Level</label>
+      <div class="input-wrapper">
+        <input type="number" id="energy" name="energy" placeholder="3" min="1" max="5" required>
+        <span class="input-addon">/ 5</span>
+      </div>
+    </div>
+    <div class="form-group form-group-full">
+      <label for="joint">Joint Fatigue</label>
+      <div class="input-wrapper">
+        <input type="number" id="joint" name="joint" placeholder="2" min="1" max="5" required>
+        <span class="input-addon">/ 5</span>
+      </div>
+      <span class="form-hint">1 = Fresh  ·  5 = Severe</span>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn-primary">
+      <span class="btn-text">Check Recovery</span>
+      <span class="btn-icon">🔋</span>
+    </button>
+  </div>
+</form>
+<div id="recovery-status" class="status-container"></div>

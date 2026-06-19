@@ -1,0 +1,36 @@
+<% if (exercises.length === 0) { %>
+  <div class="empty-state">
+    <div class="empty-icon">🏋️</div>
+    <p class="empty-text">No exercises defined yet. Add your first exercise on the right!</p>
+  </div>
+<% } else { %>
+  <div class="logs-list">
+    <% exercises.forEach(ex => { %>
+      <div class="log-card" style="border-left: 4px solid var(--accent-purple);">
+        <div class="log-header">
+          <div class="log-title-group">
+            <span class="log-icon">🏷️</span>
+            <span class="log-date"><%= ex.name %></span>
+          </div>
+          <span class="log-badge" style="background: rgba(168, 85, 247, 0.15); color: var(--accent-purple);">
+            <%= ex.category %>
+          </span>
+        </div>
+        <div class="exercise-metrics">
+          <div class="metric-pill">
+            <div class="metric-label">Muscle</div>
+            <div class="metric-value" style="font-size: 1rem;"><%= ex.muscle_group %></div>
+          </div>
+          <div class="metric-pill">
+            <div class="metric-label">Fatigue</div>
+            <div class="metric-value" style="font-size: 1rem;"><%= ex.fatigue_score %>/5</div>
+          </div>
+          <div class="metric-pill">
+            <div class="metric-label">Default Set/Rep</div>
+            <div class="metric-value" style="font-size: 1.1rem;"><%= ex.default_sets %> x <%= ex.default_reps %></div>
+          </div>
+        </div>
+      </div>
+    <% }) %>
+  </div>
+<% } %>

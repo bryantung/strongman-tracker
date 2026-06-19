@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strongman Tracker - Quick Logger</title>
+  <meta name="description" content="Log your workout sessions quickly and keep training hard.">
+
+  <!-- Premium Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- HTMX Script -->
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+
+  <!-- Custom Stylesheet -->
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <div class="app-container" style="max-width: 720px;">
+
+    <!-- Header -->
+    <header class="app-header">
+      <div class="logo-area">
+        <span class="logo-emoji">⚡</span>
+        <h1>Strongman Tracker</h1>
+      </div>
+      <div>
+        <a href="/dashboard" class="btn-secondary" style="text-decoration: none;">
+          <span>Dashboard</span>
+          <span>📊</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="app-main unified-card">
+      <div style="padding: 1.75rem;">
+        <h2>Log Workout Session</h2>
+        <%- include('forms/metrics', { items: items, exercises: exercises }) %>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>&copy; 2026 Strongman Tracker. Stay Strong, Stay Resilient.</p>
+    </footer>
+
+  </div>
+</body>
+</html>

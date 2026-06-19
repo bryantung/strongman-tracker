@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Strongman Tracker - Exercise Settings</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .settings-grid {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 768px) {
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .exercise-metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0.75rem;
+    }
+    @media (max-width: 580px) {
+      .exercise-metrics {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: var(--transition-smooth);
+    }
+    .back-btn:hover {
+      color: var(--accent-cyan);
+    }
+    select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-family: var(--font-body);
+      font-size: 1rem;
+      padding: 0.75rem 1rem;
+      min-height: 52px;
+      outline: none;
+      box-sizing: border-box;
+      transition: var(--transition-smooth);
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    select:focus-visible {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container" style="max-width: 960px;">
+    
+    <header class="app-header">
+      <div class="logo-area">
+        <a href="/" class="back-btn">
+          <span>←</span> Back to Logger
+        </a>
+      </div>
+      <h1 style="font-size: 1.35rem; margin: 0;">Directory</h1>
+    </header>
+
+    <main class="settings-grid">
+      <!-- Exercise List -->
+      <section class="card-glass">
+        <h2 style="font-size: 1.3rem; margin-bottom: 1.5rem;">Registered Lifts</h2>
+        <div id="exercise-list-container">
+          <%- include('partials/exercise_list', { exercises: exercises }) %>
+        </div>
+      </section>
+
+      <!-- Add Exercise Form -->
+      <section class="card-glass">
+        <h2 style="font-size: 1.3rem; margin-bottom: 1.5rem;">Define New Lift</h2>
+        <form
+          hx-post="/settings/exercises/save"
+          hx-target="#exercise-list-container"
+          hx-swap="innerHTML"
+          hx-on::after-request="this.reset()"
+          class="workout-form"
+        >
+          <div class="form-group">
+            <label for="name">Lift Name</label>
+            <div class="input-wrapper">
+              <input type="text" id="name" name="name" placeholder="e.g. Log Press, Overhead Press" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="category">Category</label>
+            <select id="category" name="category" required>
+              <option value="compound">Compound (Heavy Primary)</option>
+              <option value="accessory">Accessory (Isolation/Support)</option>
+              <option value="carry">Carry (Farmer walks/runs)</option>
+              <option value="conditioning">Conditioning (Circuits/sleds)</option>
+              <option value="core">Core Work</option>
+              <option value="mobility">Mobility / Warmup</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="muscle_group">Primary Muscle Group</label>
+            <select id="muscle_group" name="muscle_group" required>
+              <option value="shoulders">Shoulders</option>
+              <option value="back">Back</option>
+              <option value="traps">Traps</option>
+              <option value="chest">Chest</option>
+              <option value="legs">Legs</option>
+              <option value="arms">Arms</option>
+              <option value="core">Core</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="fatigue_score">Fatigue Score</label>
+            <div class="input-wrapper">
+              <input type="number" id="fatigue_score" name="fatigue_score" placeholder="1 to 5" min="1" max="5" required>
+              <span class="input-addon">/ 5</span>
+            </div>
+            <span class="form-hint">1 = Very light, 5 = High CNS tax (e.g. heavy Deadlift)</span>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="default_day">Default Day</label>
+              <div class="input-wrapper">
+                <input type="text" id="default_day" name="default_day" placeholder="Day 1" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="default_sets">Default Sets</label>
+              <div class="input-wrapper">
+                <input type="number" id="default_sets" name="default_sets" placeholder="5" min="1" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="default_reps">Default Reps</label>
+              <div class="input-wrapper">
+                <input type="text" id="default_reps" name="default_reps" placeholder="5 or 8-12" required>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="default_rpe">Default RPE (Optional)</label>
+              <div class="input-wrapper">
+                <input type="number" id="default_rpe" name="default_rpe" placeholder="8" min="1" max="10">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="default_weight">Default Weight (Optional)</label>
+            <div class="input-wrapper">
+              <input type="number" id="default_weight" name="default_weight" placeholder="100" step="0.5" min="0">
+              <span class="input-addon">kg</span>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn-primary" style="width: 100%; justify-content: center;">
+              <span>Add Exercise</span>
+              <span>➕</span>
+            </button>
+          </div>
+        </form>
+      </section>
+    </main>
+
+    <footer class="app-footer">
+      <p>&copy; 2026 Strongman Tracker. Stay Strong, Stay Resilient.</p>
+    </footer>
+  </div>
+</body>
+</html>

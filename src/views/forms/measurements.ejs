@@ -1,0 +1,67 @@
+<form
+  hx-post="/measurements/save"
+  hx-target="#measurements-status"
+  hx-swap="innerHTML"
+  hx-on::after-request="this.reset()"
+  class="workout-form"
+>
+  <p class="section-desc">Track body circumferences and weight for size progression.</p>
+  <div class="form-grid">
+    <div class="form-group">
+      <label for="meas-bodyweight">Bodyweight</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-bodyweight" name="bodyweight" placeholder="0.0" step="0.1" min="0" inputmode="decimal" required>
+        <span class="input-addon">kg</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="meas-chest">Chest</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-chest" name="chest" placeholder="0.0" step="0.1" min="0" inputmode="decimal" required>
+        <span class="input-addon">cm</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="meas-arms">Arms</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-arms" name="arms" placeholder="0.0" step="0.1" min="0" inputmode="decimal" required>
+        <span class="input-addon">cm</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="meas-waist">Waist</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-waist" name="waist" placeholder="0.0" step="0.1" min="0" inputmode="decimal" required>
+        <span class="input-addon">cm</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="meas-neck">Neck (Optional)</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-neck" name="neck" placeholder="0.0" step="0.1" min="0" inputmode="decimal">
+        <span class="input-addon">cm</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="meas-thigh">Thigh (Optional)</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-thigh" name="thigh" placeholder="0.0" step="0.1" min="0" inputmode="decimal">
+        <span class="input-addon">cm</span>
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="meas-forearm">Forearm (Optional)</label>
+      <div class="input-wrapper">
+        <input type="number" id="meas-forearm" name="forearm" placeholder="0.0" step="0.1" min="0" inputmode="decimal">
+        <span class="input-addon">cm</span>
+      </div>
+    </div>
+  </div>
+  <div class="form-actions">
+    <button type="submit" class="btn-primary">
+      <span class="btn-text">Save Measurements</span>
+      <span class="btn-icon">📏</span>
+    </button>
+  </div>
+</form>
+<div id="measurements-status" class="status-container"></div>
