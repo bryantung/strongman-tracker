@@ -48,6 +48,18 @@ npm run dev
 
 The application will be accessible at: **`http://localhost:3999`**
 
+To open the app from another device on the same Wi-Fi network, use the network
+URL printed by the dev server. It will look similar to:
+
+```bash
+[Server] On another device, use one of:
+  http://<your-lan-ip>:3999
+```
+
+If the other device cannot connect, check that both devices are on the same
+network, disable VPN/private relay temporarily, and allow incoming Node.js
+connections through your firewall.
+
 ### Type Checking & Build
 
 To check for type errors using TypeScript:
